@@ -40,3 +40,13 @@ export async function updateOrderStatus(id, status) {
     if (!res.ok) throw new Error("Failed to update status");
     return res.json();
 }
+
+// ADMIN: Delete Order
+export async function deleteOrder(id) {
+    const res = await fetch(`${API_URL}/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+    });
+    if (!res.ok) throw new Error("Failed to delete order");
+    return res.json();
+}

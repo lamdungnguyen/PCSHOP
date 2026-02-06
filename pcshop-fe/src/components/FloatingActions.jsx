@@ -51,13 +51,18 @@ export default function FloatingActions() {
                 <div className="flex flex-col items-end gap-3 animate-fade-in-up">
                     {/* Social Buttons */}
                     <div className="flex flex-col gap-2">
-                        <button className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 transition-transform" title="Zalo">
+                        <button
+                            onClick={() => window.open('https://zalo.me/0904560681', '_blank')}
+                            className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 transition-transform" title="Zalo">
                             <span className="font-bold text-[10px]">Zalo</span>
                         </button>
-                        <button className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 transition-transform" title="Messenger">
+                        <button
+                            onClick={() => window.open('https://t.me/lamdunggg', '_blank')}
+                            className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 transition-transform" title="Messenger">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.03 2 11c0 2.87 1.69 5.4 4.37 6.96-.06.55-.38 1.94-1.29 3.03 1.15.12 3.01-.13 4.29-1.09 1.48.51 3.08.79 4.63.79 5.52 0 10-4.03 10-9s-4.48-9-10-9z" /></svg>
                         </button>
-                        <button onClick={() => window.open('https://maps.app.goo.gl/N1gv95cg918wRMkD8', '_blank')}
+                        <button
+                            onClick={() => window.open('https://maps.app.goo.gl/N1gv95cg918wRMkD8', '_blank')}
                             className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 transition-transform" title="Map">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />

@@ -1,9 +1,11 @@
 package org.example.pcshop.config;
 
+import org.example.pcshop.entity.Banner;
 import org.example.pcshop.entity.Category;
 import org.example.pcshop.entity.Product;
 import org.example.pcshop.entity.Role;
 import org.example.pcshop.entity.User;
+import org.example.pcshop.repository.BannerRepository;
 import org.example.pcshop.repository.CategoryRepository;
 import org.example.pcshop.repository.ProductRepository;
 import org.example.pcshop.repository.UserRepository;
@@ -20,17 +22,20 @@ public class DataSeeder implements CommandLineRunner {
         private final CategoryRepository categoryRepository;
         private final UserRepository userRepository;
 
+        private final BannerRepository bannerRepository;
+
         public DataSeeder(ProductRepository productRepository, CategoryRepository categoryRepository,
-                        UserRepository userRepository) {
+                        UserRepository userRepository, BannerRepository bannerRepository) {
                 this.productRepository = productRepository;
                 this.categoryRepository = categoryRepository;
                 this.userRepository = userRepository;
+                this.bannerRepository = bannerRepository;
         }
 
-        @Override
         public void run(String... args) throws Exception {
                 seedUsers();
                 seedData();
+                seedBanners();
         }
 
         private void seedUsers() {
@@ -218,5 +223,39 @@ public class DataSeeder implements CommandLineRunner {
                 product.setImageUrl(imageUrl);
                 product.setCategory(category);
                 productRepository.save(product);
+        }
+
+        private void seedBanners() {
+                if (bannerRepository.count() > 0) {
+                        return;
+                }
+
+                System.out.println(">>> SEEDING BANNERS <<<");
+
+                // Main Slider Banners
+                createBanner("/uploads/images/1770109140050_HomeBanner1.png", "HOME_SLIDER", 1);
+                createBanner("/uploads/images/1770108519971_HomeBanner2.png", "HOME_SLIDER", 2);
+                createBanner("/uploads/images/1770109108093_HomeBanner3.png", "HOME_SLIDER", 3);
+
+                // Right Top
+                createBanner("/uploads/images/1770112380683_image_2026-02-03_165300653.png", "HOME_RIGHT_TOP", 1);
+
+                // Right Bottom
+                createBanner("/uploads/images/1770112826576_image_2026-02-03_170026547.png", "HOME_RIGHT_BOTTOM", 1);
+
+                // Wide Strip
+                createBanner("/uploads/images/1770109271750_whychoose.png", "HOME_WIDE_STRIP", 1);
+
+                System.out.println(">>> BANNER SEEDING COMPLETE <<<");
+        }
+
+        private void createBanner(String imageUrl, String section, int order) {
+                Banner banner = new Banner();
+                banner.setImageUrl(imageUrl);
+                banner.setSection(section);
+                banner.setDisplayOrder(order);
+                banner.setActive(true);
+                banner.setLink("/products"); // Default link
+                bannerRepository.save(banner);
         }
 }

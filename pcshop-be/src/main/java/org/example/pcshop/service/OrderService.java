@@ -86,4 +86,12 @@ public class OrderService {
                 order.setStatus(status);
                 return orderRepository.save(order);
         }
+
+        // Admin: Delete Order
+        public void deleteOrder(Long id) {
+                if (!orderRepository.existsById(id)) {
+                        throw new RuntimeException("Order not found");
+                }
+                orderRepository.deleteById(id);
+        }
 }

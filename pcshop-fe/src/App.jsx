@@ -14,6 +14,7 @@ import ProductManager from "./pages/admin/ProductManager";
 import UserManager from "./pages/admin/UserManager";
 import BannerManager from "./pages/admin/BannerManager";
 import OrderManager from "./pages/admin/OrderManager";
+import CategoryManager from "./pages/admin/CategoryManager";
 import FloatingActions from "./components/FloatingActions";
 import LoginSuccess from "./pages/LoginSuccess";
 import ProductDetail from "./pages/ProductDetail";
@@ -49,7 +50,10 @@ function App() {
                 <Route path="products" element={<ProductManager />} />
                 <Route path="users" element={<UserManager />} />
                 <Route path="banners" element={<BannerManager />} />
+                <Route path="users" element={<UserManager />} />
+                <Route path="banners" element={<BannerManager />} />
                 <Route path="orders" element={<OrderManager />} />
+                <Route path="categories" element={<CategoryManager />} />
                 <Route path="*" element={<Dashboard />} />
               </Route>
             </Routes>

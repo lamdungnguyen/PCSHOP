@@ -15,6 +15,7 @@ export default function AdminLayout() {
                     <Link to="/admin/orders" className="block px-4 py-3 hover:bg-white/10 rounded-lg font-medium transition-colors">Orders</Link>
                     <Link to="/admin/users" className="block px-4 py-3 hover:bg-white/10 rounded-lg font-medium transition-colors">Users</Link>
                     <Link to="/admin/banners" className="block px-4 py-3 hover:bg-white/10 rounded-lg font-medium transition-colors">Banners</Link>
+                    <Link to="/admin/categories" className="block px-4 py-3 hover:bg-white/10 rounded-lg font-medium transition-colors">Categories</Link>
                     <Link to="/admin/settings" className="block px-4 py-3 hover:bg-white/10 rounded-lg font-medium transition-colors">Settings</Link>
                 </nav>
 
