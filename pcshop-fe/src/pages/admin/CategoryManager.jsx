@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { getCategories } from '../../services/productService';
-
-const API_URL = "http://localhost:8080/api/categories";
+import { getAllCategories, createCategory, updateCategory, deleteCategory } from '../../services/categoryService';
 
 export default function CategoryManager() {
     const [categories, setCategories] = useState([]);
     const [newCategoryName, setNewCategoryName] = useState("");
     const [parentId, setParentId] = useState("");
-    const [loading, setLoading] = useState(true);
+
+    // Edit State
+    const [editingCategory, setEditingCategory] = useState(null);
+    const [editName, setEditName] = useState("");
+    const [editParentId, setEditParentId] = useState("");
 
     useEffect(() => {
         loadCategories();
@@ -15,51 +17,62 @@ export default function CategoryManager() {
 
     const loadCategories = async () => {
         try {
-            const data = await getCategories();
+            const data = await getAllCategories();
             setCategories(data);
         } catch (error) {
             console.error(error);
-        } finally {
-            setLoading(false);
         }
     };
 
     const handleCreate = async (e) => {
         e.preventDefault();
-        if (!newCategoryName.trim()) return;
-
-        const token = JSON.parse(localStorage.getItem("user"))?.token;
-        const payload = {
-            name: newCategoryName,
-            parent: parentId ? { id: parentId } : null
-        };
-
         try {
-            const res = await fetch(API_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
+            await createCategory({
+                name: newCategoryName,
+                parent: parentId ? { id: parentId } : null
             });
-
-            if (res.ok) {
-                setNewCategoryName("");
-                setParentId("");
-                loadCategories(); // Refresh list
-                alert("Category created!");
-            } else {
-                alert("Failed to create category");
-            }
+            setNewCategoryName("");
+            setParentId("");
+            loadCategories();
+            alert("Category created!");
         } catch (err) {
             console.error(err);
             alert("Error creating category");
         }
     };
 
-    // Helper to render categories recursively (flat list for now for table, but need logic for display)
-    // For simplicity, we just list them flat.
+    const handleEditClick = (cat) => {
+        setEditingCategory(cat);
+        setEditName(cat.name);
+        setEditParentId(cat.parent ? cat.parent.id : "");
+    };
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        try {
+            await updateCategory(editingCategory.id, {
+                name: editName,
+                parent: editParentId ? { id: editParentId } : null
+            });
+            setEditingCategory(null);
+            loadCategories();
+            alert("Category updated!");
+        } catch (err) {
+            console.error(err);
+            alert("Error updating category");
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this category?")) return;
+        try {
+            await deleteCategory(id);
+            loadCategories();
+        } catch (err) {
+            console.error(err);
+            alert("Error deleting category");
+        }
+    };
 
     return (
         <div className="p-6">
@@ -82,7 +95,7 @@ export default function CategoryManager() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Parent Category (Optional)</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Parent Category</label>
                             <select
                                 className="w-full border border-gray-300 rounded-lg p-2"
                                 value={parentId}
@@ -122,9 +135,19 @@ export default function CategoryManager() {
                                     <td className="px-6 py-4 text-gray-500">
                                         {cat.parent ? cat.parent.name : <span className="text-gray-300">-</span>}
                                     </td>
-                                    <td className="px-6 py-4">
-                                        {/* Future: Edit/Delete */}
-                                        <span className="text-gray-400 text-xs">Edit</span>
+                                    <td className="px-6 py-4 space-x-2">
+                                        <button
+                                            onClick={() => handleEditClick(cat)}
+                                            className="text-blue-600 hover:underline"
+                                        >
+                                            Edit
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(cat.id)}
+                                            className="text-red-600 hover:underline"
+                                        >
+                                            Delete
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
@@ -132,6 +155,57 @@ export default function CategoryManager() {
                     </table>
                 </div>
             </div>
+
+            {/* Edit Modal (Simple implementation) */}
+            {editingCategory && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl p-6 w-full max-w-md">
+                        <h2 className="text-xl font-bold mb-4">Edit Category</h2>
+                        <form onSubmit={handleUpdate} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                <input
+                                    type="text"
+                                    className="w-full border border-gray-300 rounded-lg p-2"
+                                    value={editName}
+                                    onChange={e => setEditName(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Parent</label>
+                                <select
+                                    className="w-full border border-gray-300 rounded-lg p-2"
+                                    value={editParentId}
+                                    onChange={e => setEditParentId(e.target.value)}
+                                >
+                                    <option value="">-- None (Root) --</option>
+                                    {categories
+                                        .filter(c => c.id !== editingCategory.id) // Prevent self-parenting
+                                        .map(cat => (
+                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                        ))}
+                                </select>
+                            </div>
+                            <div className="flex justify-end gap-2 mt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingCategory(null)}
+                                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
+                                >
+                                    Update
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

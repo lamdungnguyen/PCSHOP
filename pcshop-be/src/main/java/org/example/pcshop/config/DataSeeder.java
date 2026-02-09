@@ -1,5 +1,6 @@
 package org.example.pcshop.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.example.pcshop.entity.Banner;
 import org.example.pcshop.entity.Category;
 import org.example.pcshop.entity.Product;
@@ -16,6 +17,7 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 @Component
+@Slf4j
 public class DataSeeder implements CommandLineRunner {
 
         private final ProductRepository productRepository;
@@ -49,7 +51,7 @@ public class DataSeeder implements CommandLineRunner {
                         admin.setEmail("lamdung04@gmail.com");
                         // Force update role
                         userRepository.save(admin);
-                        System.out.println(">>> Updated Admin Password and Role <<<");
+                        log.info(">>> Updated Admin Password and Role <<<");
                 } else {
                         User admin = new User();
                         admin.setUsername("admin");
@@ -58,7 +60,7 @@ public class DataSeeder implements CommandLineRunner {
                         admin.setRole(Role.ADMIN);
                         admin.setProvider("LOCAL");
                         userRepository.save(admin);
-                        System.out.println(">>> Created Admin User <<<");
+                        log.info(">>> Created Admin User <<<");
                 }
 
                 // User
@@ -192,7 +194,7 @@ public class DataSeeder implements CommandLineRunner {
                                 "https://www.anphatpc.com.vn/media/product/44485_ban_phim_co_razer_blackwidow_v4_pro_green_switch_1.jpg",
                                 keyboard);
 
-                System.out.println(">>> DATA CHECK/SEED COMPLETE <<<");
+                log.info(">>> DATA CHECK/SEED COMPLETE <<<");
         }
 
         private Category createCategory(String name, Category parent) {
@@ -230,7 +232,7 @@ public class DataSeeder implements CommandLineRunner {
                         return;
                 }
 
-                System.out.println(">>> SEEDING BANNERS <<<");
+                log.info(">>> SEEDING BANNERS <<<");
 
                 // Main Slider Banners
                 createBanner("/uploads/images/1770109140050_HomeBanner1.png", "HOME_SLIDER", 1);
@@ -246,7 +248,7 @@ public class DataSeeder implements CommandLineRunner {
                 // Wide Strip
                 createBanner("/uploads/images/1770109271750_whychoose.png", "HOME_WIDE_STRIP", 1);
 
-                System.out.println(">>> BANNER SEEDING COMPLETE <<<");
+                log.info(">>> BANNER SEEDING COMPLETE <<<");
         }
 
         private void createBanner(String imageUrl, String section, int order) {

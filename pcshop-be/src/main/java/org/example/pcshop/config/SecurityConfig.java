@@ -56,7 +56,10 @@ public class SecurityConfig {
                                                                 "/api/upload/**", // Made Public as requested
                                                                 "/api/banners/**", // Made Public: Allow viewing all
                                                                                    // banners
-                                                                "/api/banners/active") // Added active banners as public
+                                                                "/api/banners/active", // Added active banners as public
+                                                                "/api/news/**") // News public access (GET handled by
+                                                                                // method security or allow all GET
+                                                                                // here)
                                                 .permitAll()
 
                                                 // 🔐 ADMIN
@@ -64,6 +67,9 @@ public class SecurityConfig {
                                                 .requestMatchers(HttpMethod.POST, "/api/banners/**").hasRole("ADMIN")
                                                 .requestMatchers(HttpMethod.PUT, "/api/banners/**").hasRole("ADMIN")
                                                 .requestMatchers(HttpMethod.DELETE, "/api/banners/**").hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.POST, "/api/news/**").hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.PUT, "/api/news/**").hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.DELETE, "/api/news/**").hasRole("ADMIN")
 
                                                 // 🔐 USER & ADMIN
                                                 .requestMatchers("/api/orders/all").hasRole("ADMIN")

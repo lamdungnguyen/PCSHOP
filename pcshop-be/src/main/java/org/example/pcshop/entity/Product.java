@@ -20,6 +20,8 @@ public class Product {
 
     private Integer quantity;
 
+    private Integer wattage;
+
     private String imageUrl; // Main image
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -31,4 +33,11 @@ public class Product {
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
+
+    @Column(columnDefinition = "TEXT")
+    private String specifications; // General specs for the product family
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @com.fasterxml.jackson.annotation.JsonManagedReference
+    private java.util.List<ProductVariant> variants = new java.util.ArrayList<>();
 }

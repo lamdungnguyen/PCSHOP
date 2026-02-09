@@ -1,7 +1,7 @@
-
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getProductById, getReviews, createReview, getRelatedProducts } from "../services/productService";
+import { getActiveBanners } from "../services/bannerService";
 import { useCart } from "../context/CartContext";
 import ProductCard from "../components/ProductCard";
 
@@ -18,13 +18,19 @@ export default function ProductDetail() {
     const [reviewForm, setReviewForm] = useState({ content: "", rating: 5 });
     const [activeImage, setActiveImage] = useState(null);
 
+    // Variant State
+    const [selectedVariant, setSelectedVariant] = useState(null);
+
+    // Banners State
+    const [banners, setBanners] = useState({ left: null, right: null });
+
     // Carousel State
     const [currentSlide, setCurrentSlide] = useState(0);
-    const relatedRef = useRef(null);
 
     useEffect(() => {
         window.scrollTo(0, 0);
         loadProductData();
+        loadBanners();
     }, [id]);
 
     // Auto-scroll logic for Related Products
@@ -37,11 +43,34 @@ export default function ProductDetail() {
         }
     }, [currentSlide, relatedProducts]);
 
+    const loadBanners = async () => {
+        try {
+            const allBanners = await getActiveBanners();
+            const left = allBanners.find(b => b.section === "PRODUCT_LEFT");
+            const right = allBanners.find(b => b.section === "PRODUCT_RIGHT");
+            setBanners({ left, right });
+        } catch (error) {
+            console.error("Failed to load banners", error);
+        }
+    };
+
     const loadProductData = async () => {
         setLoading(true);
         try {
             const productData = await getProductById(id);
             setProduct(productData);
+
+            // Set default variant if exists
+            if (productData.variants && productData.variants.length > 0) {
+                // Sort by price or default logic? Just take first.
+                setSelectedVariant(productData.variants[0]);
+                if (productData.variants[0].imageUrl) {
+                    setActiveImage(productData.variants[0].imageUrl);
+                }
+            } else {
+                setSelectedVariant(null);
+                setActiveImage(null);
+            }
 
             const [reviewsData, relatedData] = await Promise.all([
                 getReviews(id),
@@ -69,7 +98,7 @@ export default function ProductDetail() {
         try {
             const newReview = await createReview({
                 productId: id,
-                userId: user.id || 1, // Fallback to 1 for testing if no ID
+                userId: user.id || 1,
                 content: reviewForm.content,
                 rating: reviewForm.rating
             });
@@ -77,6 +106,13 @@ export default function ProductDetail() {
             setReviewForm({ content: "", rating: 5 });
         } catch (error) {
             alert("Failed to post review");
+        }
+    };
+
+    const handleVariantSelect = (variant) => {
+        setSelectedVariant(variant);
+        if (variant.imageUrl) {
+            setActiveImage(variant.imageUrl);
         }
     };
 
@@ -103,7 +139,7 @@ export default function ProductDetail() {
             <>
                 <Link to="/" className="hover:text-primary">Home</Link> /
                 <Link to="/products" className="hover:text-primary mx-1">Products</Link> /
-                {paths.map((cat, index) => (
+                {paths.map((cat) => (
                     <span key={cat.id}>
                         <Link to={`/products?category=${cat.id}`} className="hover:text-primary mx-1">{cat.name}</Link>
                         /
@@ -116,19 +152,38 @@ export default function ProductDetail() {
     if (loading) return <div className="p-10 text-center">Loading...</div>;
     if (!product) return <div className="p-10 text-center">Product not found</div>;
 
+    const displayPrice = selectedVariant ? selectedVariant.price : product.price;
+    const displayStock = selectedVariant ? selectedVariant.stockQuantity : product.quantity;
+
     return (
         <div className="bg-background min-h-screen font-sans text-text flex flex-col">
             <Navbar />
 
             <div className="flex-1 relative">
                 {/* Left Banner */}
-                <div className="hidden 2xl:block absolute left-4 top-4 bottom-4 w-40 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
-                    AD Banner Left
+                <div className="hidden 2xl:block absolute left-4 top-4 bottom-4 w-40 flex items-start justify-center pt-20">
+                    {banners.left ? (
+                        <a href={banners.left.link || "#"} className="block w-full">
+                            <img src={banners.left.imageUrl} alt="Ad" className="w-full rounded-lg shadow-sm" />
+                        </a>
+                    ) : (
+                        <div className="w-full h-96 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-sm">
+                            AD Banner Left
+                        </div>
+                    )}
                 </div>
 
                 {/* Right Banner */}
-                <div className="hidden 2xl:block absolute right-4 top-4 bottom-4 w-40 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
-                    AD Banner Right
+                <div className="hidden 2xl:block absolute right-4 top-4 bottom-4 w-40 flex items-start justify-center pt-20">
+                    {banners.right ? (
+                        <a href={banners.right.link || "#"} className="block w-full">
+                            <img src={banners.right.imageUrl} alt="Ad" className="w-full rounded-lg shadow-sm" />
+                        </a>
+                    ) : (
+                        <div className="w-full h-96 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-sm">
+                            AD Banner Right
+                        </div>
+                    )}
                 </div>
 
                 <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -152,13 +207,49 @@ export default function ProductDetail() {
                                     alt={product.name}
                                     className="max-h-[400px] object-contain transition-transform duration-300 group-hover:scale-105"
                                 />
+                                {(() => {
+                                    const allImages = [
+                                        product.imageUrl,
+                                        ...(product.images || []).map(i => i.imageUrl),
+                                        ...(product.variants || []).filter(v => v.imageUrl).map(v => v.imageUrl)
+                                    ].filter(Boolean);
+
+                                    if (allImages.length > 1) {
+                                        const currentIndex = allImages.indexOf(activeImage || product.imageUrl);
+                                        const nextImage = () => {
+                                            const nextIdx = (currentIndex + 1) % allImages.length;
+                                            setActiveImage(allImages[nextIdx]);
+                                        };
+                                        const prevImage = () => {
+                                            const prevIdx = (currentIndex - 1 + allImages.length) % allImages.length;
+                                            setActiveImage(allImages[prevIdx]);
+                                        };
+
+                                        return (
+                                            <>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); prevImage(); }}
+                                                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all z-10"
+                                                >
+                                                    ←
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); nextImage(); }}
+                                                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all z-10"
+                                                >
+                                                    →
+                                                </button>
+                                            </>
+                                        );
+                                    }
+                                })()}
                             </div>
                             {/* Thumbnails */}
                             {product.images && product.images.length > 0 && (
                                 <div className="flex gap-2 overflow-x-auto pb-2">
                                     <button
-                                        onClick={() => setActiveImage(product.imageUrl)}
-                                        className={`w-20 h-20 border-2 rounded-lg p-1 bg-white ${activeImage === product.imageUrl || !activeImage ? 'border-red-600' : 'border-gray-200'}`}
+                                        onClick={() => { setActiveImage(product.imageUrl); setSelectedVariant(null); }}
+                                        className={`w-20 h-20 border-2 rounded-lg p-1 bg-white ${activeImage === product.imageUrl ? 'border-red-600' : 'border-gray-200'}`}
                                     >
                                         <img src={product.imageUrl} className="w-full h-full object-contain" alt="Main" />
                                     </button>
@@ -169,6 +260,17 @@ export default function ProductDetail() {
                                             className={`w-20 h-20 border-2 rounded-lg p-1 bg-white ${activeImage === img.imageUrl ? 'border-red-600' : 'border-gray-200'}`}
                                         >
                                             <img src={img.imageUrl} className="w-full h-full object-contain" alt={`View ${idx + 1}`} />
+                                        </button>
+                                    ))}
+                                    {/* Variant Images as well? Maybe not needed if they selecting variant sets the image */}
+                                    {product.variants?.filter(v => v.imageUrl).map((v, idx) => (
+                                        <button
+                                            key={`v-${idx}`}
+                                            onClick={() => handleVariantSelect(v)}
+                                            className={`w-20 h-20 border-2 rounded-lg p-1 bg-white ${activeImage === v.imageUrl ? 'border-red-600' : 'border-gray-200'}`}
+                                            title={v.color}
+                                        >
+                                            <img src={v.imageUrl} className="w-full h-full object-contain" alt={v.color} />
                                         </button>
                                     ))}
                                 </div>
@@ -184,21 +286,90 @@ export default function ProductDetail() {
                             </div>
 
                             <div className="text-3xl text-red-600 font-bold mb-6">
-                                {product.price?.toLocaleString()} ₫
+                                {displayPrice?.toLocaleString()} ₫
                             </div>
+
+                            {/* Variants Selection */}
+                            {product.variants && product.variants.length > 0 && (
+                                <div className="mb-6">
+                                    <h3 className="text-sm font-bold text-gray-700 mb-2 uppercase">Select Option</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {product.variants.map((v, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => handleVariantSelect(v)}
+                                                className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${selectedVariant === v
+                                                    ? 'border-primary bg-primary/5 text-primary'
+                                                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                                                    }`}
+                                            >
+                                                {v.color} {v.specifications && `- ${v.specifications}`}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="bg-gray-50 p-4 rounded-lg mb-6 text-sm text-gray-700 space-y-2">
                                 <p><strong>Category:</strong> {product.category?.name || "N/A"}</p>
-                                <p><strong>Availability:</strong> <span className="text-green-600 font-bold">In Stock ({product.quantity})</span></p>
+                                <p>
+                                    <strong>Availability:</strong>
+                                    {displayStock > 0 ? (
+                                        <span className="text-green-600 font-bold ml-1">In Stock ({displayStock})</span>
+                                    ) : (
+                                        <span className="text-red-600 font-bold ml-1">Out of Stock</span>
+                                    )}
+                                </p>
                                 <p><strong>Warranty:</strong> 24 Months</p>
+                                {product.wattage && <p><strong>Wattage:</strong> {product.wattage}W</p>}
                             </div>
+
+                            {/* Technical Specifications Table */}
+                            {product.specifications && (
+                                <div className="mb-6 border border-gray-200 rounded-lg overflow-hidden">
+                                    <h3 className="bg-gray-100 px-4 py-2 font-bold text-gray-800 text-sm border-b border-gray-200">Technical Specifications</h3>
+                                    <table className="w-full text-sm">
+                                        <tbody>
+                                            {(() => {
+                                                try {
+                                                    const specs = JSON.parse(product.specifications);
+                                                    if (Array.isArray(specs)) {
+                                                        return specs.map((item, idx) => (
+                                                            <tr key={idx} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                                                                <td className="px-4 py-2 font-semibold text-gray-600 border-b border-gray-100 w-1/3">{item.key}</td>
+                                                                <td className="px-4 py-2 text-gray-800 border-b border-gray-100">{item.value}</td>
+                                                            </tr>
+                                                        ));
+                                                    }
+                                                    // Handle legacy object if exists
+                                                    if (typeof specs === 'object') {
+                                                        return Object.entries(specs).map(([key, value], idx) => (
+                                                            <tr key={idx} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                                                                <td className="px-4 py-2 font-semibold text-gray-600 border-b border-gray-100 w-1/3">{key}</td>
+                                                                <td className="px-4 py-2 text-gray-800 border-b border-gray-100">{value}</td>
+                                                            </tr>
+                                                        ));
+                                                    }
+                                                    return <tr><td className="px-4 py-2">{product.specifications}</td></tr>;
+                                                } catch (e) {
+                                                    return <tr><td className="px-4 py-2 whitespace-pre-wrap">{product.specifications}</td></tr>;
+                                                }
+                                            })()}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
 
                             <div className="flex gap-4">
                                 <button
-                                    onClick={() => addToCart(product)}
-                                    className="flex-1 bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 transition shadow-lg text-lg uppercase"
+                                    onClick={() => addToCart(product, 1, selectedVariant)}
+                                    disabled={displayStock <= 0}
+                                    className={`flex-1 py-3 rounded-lg font-bold transition shadow-lg text-lg uppercase ${displayStock > 0
+                                        ? 'bg-red-600 text-white hover:bg-red-700'
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        }`}
                                 >
-                                    Buy Now
+                                    {displayStock > 0 ? 'Buy Now' : 'Out of Stock'}
                                 </button>
                                 <button className="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50">
                                     Add to Wishlist

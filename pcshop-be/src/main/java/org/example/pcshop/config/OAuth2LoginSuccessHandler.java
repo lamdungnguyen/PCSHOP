@@ -3,6 +3,7 @@ package org.example.pcshop.config;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.example.pcshop.entity.User;
 import org.example.pcshop.repository.UserRepository;
 import org.example.pcshop.security.JwtUtil;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.util.Optional;
 
 @Component
+@Slf4j
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final UserRepository userRepository;
@@ -62,8 +64,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         // 3️⃣ TẠO JWT
         String token = jwtUtil.generateToken(user.getUsername());
 
-        // 🔥 TEST – IN TOKEN RA CONSOLE
-        System.out.println("JWT TOKEN = " + token);
+        log.info("User {} logged in via OAuth2", user.getUsername());
 
         // 4️⃣ Redirect về FE + token
         response.sendRedirect("http://localhost:5173/login-success?token=" + token);

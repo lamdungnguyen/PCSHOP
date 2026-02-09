@@ -16,14 +16,42 @@ export default function BuildPC() {
         { id: 'screen', name: 'Monitor', items: [] },
     ]);
 
-    const [selectedItems, setSelectedItems] = useState({});
+    const [selectedItems, setSelectedItems] = useState(() => {
+        try {
+            const saved = sessionStorage.getItem("pc_build_state");
+            return saved ? JSON.parse(saved) : {};
+        } catch (e) {
+            return {};
+        }
+    });
+
     const [totalPrice, setTotalPrice] = useState(0);
+    const [totalWattage, setTotalWattage] = useState(0);
 
     useEffect(() => {
-        // Calculate total
-        const total = Object.values(selectedItems).reduce((sum, item) => sum + (item ? item.price : 0), 0);
-        setTotalPrice(total);
+        sessionStorage.setItem("pc_build_state", JSON.stringify(selectedItems));
+
+        // Calculate total price and wattage
+        let price = 0;
+        let wattage = 0;
+        Object.entries(selectedItems).forEach(([key, item]) => {
+            if (item) {
+                price += item.price;
+                if (key !== 'psu' && item.wattage) {
+                    wattage += item.wattage;
+                }
+            }
+        });
+        setTotalPrice(price);
+        setTotalWattage(wattage);
     }, [selectedItems]);
+
+    const handleReset = () => {
+        if (window.confirm("Are you sure you want to reset your configuration?")) {
+            setSelectedItems({});
+            sessionStorage.removeItem("pc_build_state");
+        }
+    };
 
     // Mock fetching products for selection modal (simplified for now)
     const [showModal, setShowModal] = useState(null); // 'cpu', 'main', etc.
@@ -52,7 +80,21 @@ export default function BuildPC() {
             };
 
             const keyword = mapping[categoryId];
-            const filtered = allProducts.filter(p => p.category?.name?.includes(keyword) || p.name?.includes(keyword));
+            let filtered = allProducts.filter(p => p.category?.name?.includes(keyword) || p.name?.includes(keyword));
+
+            // Logic Recommendation for PSU
+            if (categoryId === 'psu' && totalWattage > 0) {
+                const recommendedWattage = totalWattage + 150; // Buffer
+                // Sort by wattage closest to recommended, but must be higher
+                filtered = filtered.sort((a, b) => {
+                    const wa = a.wattage || 0;
+                    const wb = b.wattage || 0;
+                    if (wa >= recommendedWattage && wb < recommendedWattage) return -1;
+                    if (wa < recommendedWattage && wb >= recommendedWattage) return 1;
+                    return wa - wb;
+                });
+            }
+
             setModalProducts(filtered);
 
         } catch (e) {
@@ -127,6 +169,7 @@ export default function BuildPC() {
                                         <div className="flex-1">
                                             <div className="font-bold text-primary">{selectedItems[cat.id].name}</div>
                                             <div className="text-red-600 font-bold">{selectedItems[cat.id].price.toLocaleString()} ₫</div>
+                                            {selectedItems[cat.id].wattage && <div className="text-xs text-gray-500">{selectedItems[cat.id].wattage}W</div>}
                                         </div>
                                         <button
                                             onClick={() => setSelectedItems(prev => ({ ...prev, [cat.id]: null }))}
@@ -157,8 +200,13 @@ export default function BuildPC() {
                                 </div>
                                 <div className="flex justify-between text-gray-600">
                                     <span>Estimated Wattage</span>
-                                    <span className="text-blue-600 font-bold">~ 450W</span>
+                                    <span className="text-blue-600 font-bold">{totalWattage > 0 ? `~ ${totalWattage}W` : '0W'}</span>
                                 </div>
+                                {totalWattage > 0 && (
+                                    <div className="text-xs text-gray-400 mt-1">
+                                        Recommended PSU: <span className="font-bold text-black">{totalWattage + 150}W+</span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex justify-between text-2xl font-bold mb-8 pt-4 border-t border-gray-100 text-red-600">
@@ -169,8 +217,11 @@ export default function BuildPC() {
                             <button onClick={handleAddAllToCart} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-red-500/30 transition-all uppercase tracking-wider mb-3">
                                 Add Config to Cart
                             </button>
-                            <button className="w-full bg-black hover:bg-gray-800 text-white font-bold py-3 rounded-xl shadow-lg transition-all">
+                            <button className="w-full bg-black hover:bg-gray-800 text-white font-bold py-3 rounded-xl shadow-lg transition-all mb-3">
                                 Print / Download
+                            </button>
+                            <button onClick={handleReset} className="w-full bg-white hover:bg-gray-50 text-red-600 border border-red-200 font-bold py-3 rounded-xl transition-all">
+                                Reset Configuration
                             </button>
                         </div>
                     </div>
@@ -259,6 +310,7 @@ export default function BuildPC() {
                                     <div className="flex-1">
                                         <div className="font-bold text-sm text-primary line-clamp-2 mb-1">{product.name}</div>
                                         <div className="text-red-600 font-bold">{product.price.toLocaleString()} ₫</div>
+                                        {product.wattage && <div className="text-xs text-gray-500">Power: {product.wattage}W</div>}
                                     </div>
                                     <button
                                         onClick={() => selectItem(showModal, product)}

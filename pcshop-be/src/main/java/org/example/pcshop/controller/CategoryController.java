@@ -27,4 +27,22 @@ public class CategoryController {
     public Category create(@RequestBody Category category) {
         return categoryRepository.save(category);
     }
+
+    // PUT: update category
+    @PutMapping("/{id}")
+    public Category update(@PathVariable Long id, @RequestBody Category categoryDetails) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Category not found"));
+
+        category.setName(categoryDetails.getName());
+        category.setParent(categoryDetails.getParent());
+
+        return categoryRepository.save(category);
+    }
+
+    // DELETE: xóa category
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable Long id) {
+        categoryRepository.deleteById(id);
+    }
 }

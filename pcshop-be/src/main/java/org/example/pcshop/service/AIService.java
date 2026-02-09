@@ -1,6 +1,7 @@
 package org.example.pcshop.service;
 
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@Slf4j
 public class AIService {
 
     @Value("${gemini.api.key}")
@@ -23,7 +25,11 @@ public class AIService {
     // 🔍 Kiểm tra Spring có nhận key không
     @PostConstruct
     public void checkKey() {
-        System.out.println("KEY_FROM_SPRING = [" + apiKey + "]");
+        if (apiKey == null || apiKey.isEmpty()) {
+            log.warn("Gemini API Key is missing!");
+        } else {
+            log.info("Gemini API Key loaded successfully.");
+        }
     }
 
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
@@ -96,13 +102,13 @@ public class AIService {
             }
             rawJson = rawJson.trim();
 
-            System.out.println("GEMINI_RESPONSE: " + rawJson);
+            log.debug("GEMINI_RESPONSE: {}", rawJson);
 
             // 7️⃣ Parse
             return objectMapper.readValue(rawJson, org.example.pcshop.dto.ChatResponse.class);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error calling Gemini API", e);
             org.example.pcshop.dto.ChatResponse errorRes = new org.example.pcshop.dto.ChatResponse();
             errorRes.setReply("PC Shop AI Error: " + e.getMessage());
             errorRes.setRecommendations(List.of());

@@ -48,6 +48,11 @@ public class ProductController {
             product.getImages().forEach(img -> img.setProduct(product));
         }
 
+        // Link variants to product
+        if (product.getVariants() != null) {
+            product.getVariants().forEach(variant -> variant.setProduct(product));
+        }
+
         return productRepository.save(product);
     }
 
@@ -83,14 +88,25 @@ public class ProductController {
         product.setName(newProduct.getName());
         product.setPrice(newProduct.getPrice());
         product.setQuantity(newProduct.getQuantity());
+        product.setWattage(newProduct.getWattage());
         product.setDescription(newProduct.getDescription());
         product.setImageUrl(newProduct.getImageUrl());
+        product.setSpecifications(newProduct.getSpecifications()); // Update specs
 
         if (newProduct.getImages() != null) {
             product.getImages().clear();
             newProduct.getImages().forEach(img -> {
                 img.setProduct(product);
                 product.getImages().add(img);
+            });
+        }
+
+        // Update Variants
+        if (newProduct.getVariants() != null) {
+            product.getVariants().clear(); // Simple replacement strategy
+            newProduct.getVariants().forEach(variant -> {
+                variant.setProduct(product);
+                product.getVariants().add(variant);
             });
         }
 

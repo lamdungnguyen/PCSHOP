@@ -14,15 +14,28 @@ export const CartProvider = ({ children }) => {
         localStorage.setItem('cart', JSON.stringify(cartItems));
     }, [cartItems]);
 
-    const addToCart = (product) => {
+    const addToCart = (product, quantity = 1, variant = null) => {
         setCartItems((prevItems) => {
-            const existingItem = prevItems.find((item) => item.id === product.id);
+            const cartItemId = variant ? `${product.id}-${variant.id}` : product.id;
+            const existingItem = prevItems.find((item) => item.id === cartItemId);
+
             if (existingItem) {
                 return prevItems.map((item) =>
-                    item.id === product.id ? { ...item, qty: item.qty + 1 } : item
+                    item.id === cartItemId ? { ...item, qty: item.qty + quantity } : item
                 );
             }
-            return [...prevItems, { ...product, qty: 1 }];
+
+            const item = {
+                id: cartItemId,
+                productId: product.id,
+                name: variant ? `${product.name} (${variant.color})` : product.name,
+                price: variant ? variant.price : product.price,
+                imageUrl: variant && variant.imageUrl ? variant.imageUrl : product.imageUrl,
+                qty: quantity,
+                variantId: variant ? variant.id : null
+            };
+
+            return [...prevItems, item];
         });
         alert("Added to cart!");
     };

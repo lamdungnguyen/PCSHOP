@@ -33,6 +33,22 @@ const SECTIONS = {
         recWidth: 1200,
         recHeight: 150,
         ratio: "8:1"
+    },
+    PRODUCT_LEFT: {
+        id: "PRODUCT_LEFT",
+        label: "Product Page Left",
+        desc: "Vertical banner on the left side of product detail page (Desktop only).",
+        recWidth: 160,
+        recHeight: 600,
+        ratio: "1:4"
+    },
+    PRODUCT_RIGHT: {
+        id: "PRODUCT_RIGHT",
+        label: "Product Page Right",
+        desc: "Vertical banner on the right side of product detail page (Desktop only).",
+        recWidth: 160,
+        recHeight: 600,
+        ratio: "1:4"
     }
 };
 
