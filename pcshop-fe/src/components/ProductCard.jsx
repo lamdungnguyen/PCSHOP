@@ -63,10 +63,17 @@ export default function ProductCard({ product }) {
           </div>
 
           <div className="flex items-center gap-1 mt-2">
-            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-green-100 text-green-600 text-xs">
-              ✓
-            </span>
-            <span className="text-[10px] text-green-700 font-medium">In Stock</span>
+            {product.quantity > 0 ? (
+              <>
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-green-100 text-green-600 text-xs">✓</span>
+                <span className="text-[10px] text-green-700 font-medium">In Stock</span>
+              </>
+            ) : (
+              <>
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-600 text-xs">✕</span>
+                <span className="text-[10px] text-red-700 font-medium">Out of Stock</span>
+              </>
+            )}
           </div>
         </div>
       </div>

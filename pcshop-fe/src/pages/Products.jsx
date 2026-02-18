@@ -61,7 +61,7 @@ export default function Products() {
             <main className="flex-1 container-custom mx-auto py-8 px-4">
                 <div className="flex flex-col md:flex-row gap-8">
                     {/* Sidebar Filters */}
-                    <aside className="w-full md:w-64 flex-shrink-0 space-y-6">
+                    <aside className="w-full md:w-64 flex-shrink-0 space-y-6 sticky top-24 h-fit">
                         <CategorySidebar categories={categories} />
 
                         {/* Price Filter Mock */}

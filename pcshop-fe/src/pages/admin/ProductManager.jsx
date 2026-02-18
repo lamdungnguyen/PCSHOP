@@ -12,6 +12,7 @@ export default function ProductManager() {
     const [dragging, setDragging] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [activeTab, setActiveTab] = useState("general"); // general | variants
+    const [searchTerm, setSearchTerm] = useState("");
 
     // Form state
     const [formData, setFormData] = useState({
@@ -246,19 +247,31 @@ export default function ProductManager() {
         <div>
             <div className="flex items-center justify-between mb-8">
                 <h1 className="text-2xl font-bold">Product Management</h1>
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => setIsCategoryModalOpen(true)}
-                        className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg font-bold text-sm transition-all"
-                    >
-                        + Add Category
-                    </button>
-                    <button
-                        onClick={openCreateModal}
-                        className="bg-primary hover:bg-black text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg transition-all"
-                    >
-                        + Add Product
-                    </button>
+                <div className="flex items-center gap-4">
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Search products..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="border border-gray-300 rounded-lg px-4 py-2 pl-10 focus:ring-2 focus:ring-black outline-none w-64"
+                        />
+                        <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setIsCategoryModalOpen(true)}
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg font-bold text-sm transition-all"
+                        >
+                            + Add Category
+                        </button>
+                        <button
+                            onClick={openCreateModal}
+                            className="bg-primary hover:bg-black text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg transition-all"
+                        >
+                            + Add Product
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -282,7 +295,10 @@ export default function ProductManager() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {products.map((p) => (
+                            {products.filter(p =>
+                                p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                p.id.toString().includes(searchTerm)
+                            ).map((p) => (
                                 <tr key={p.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4 font-mono text-gray-500">#{p.id}</td>
                                     <td className="px-6 py-4 font-medium text-gray-900 flex items-center gap-3">
@@ -319,7 +335,7 @@ export default function ProductManager() {
             {/* Product Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden">
+                    <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden">
                         {/* Header */}
                         <div className="px-8 py-5 border-b border-gray-100 flex justify-between items-center bg-white z-10">
                             <div>
@@ -327,8 +343,8 @@ export default function ProductManager() {
                                 <p className="text-sm text-gray-400">Fill in the information below to {editingProduct ? "update" : "create"} a product.</p>
                             </div>
                             <div className="flex gap-4">
-                                <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold px-4 py-2 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
-                                <button onClick={handleSubmit} className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-shadow font-bold shadow-lg ring-4 ring-gray-100">
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold px-4 py-2 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
+                                <button type="submit" className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-shadow font-bold shadow-lg ring-4 ring-gray-100">
                                     {editingProduct ? "Update Product" : "Create Product"}
                                 </button>
                             </div>
@@ -337,12 +353,14 @@ export default function ProductManager() {
                         {/* Tabs */}
                         <div className="flex border-b border-gray-200 px-8 bg-gray-50/50">
                             <button
+                                type="button"
                                 className={`py-4 px-6 text-sm font-bold border-b-2 transition-all ${activeTab === 'general' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                                 onClick={() => setActiveTab('general')}
                             >
                                 General Information
                             </button>
                             <button
+                                type="button"
                                 className={`py-4 px-6 text-sm font-bold border-b-2 transition-all ${activeTab === 'variants' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                                 onClick={() => setActiveTab('variants')}
                             >
@@ -461,6 +479,7 @@ export default function ProductManager() {
                                                             />
                                                         </div>
                                                         <button
+                                                            type="button"
                                                             onClick={() => {
                                                                 const newSpecs = formData.specifications.filter((_, i) => i !== idx);
                                                                 setFormData({ ...formData, specifications: newSpecs });
@@ -472,6 +491,7 @@ export default function ProductManager() {
                                                     </div>
                                                 ))}
                                                 <button
+                                                    type="button"
                                                     onClick={() => setFormData({ ...formData, specifications: [...formData.specifications, { key: "", value: "" }] })}
                                                     className="mt-2 w-full py-3 border-2 border-dashed border-gray-200 rounded-lg text-gray-500 font-bold hover:border-black hover:text-black transition-all flex items-center justify-center gap-2"
                                                 >
@@ -534,6 +554,7 @@ export default function ProductManager() {
                                                         <>
                                                             <img src={formData.imageUrl} className="w-full h-full object-contain p-2" alt="Main" />
                                                             <button
+                                                                type="button"
                                                                 onClick={(e) => { e.stopPropagation(); setFormData({ ...formData, imageUrl: "" }); }}
                                                                 className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 z-10"
                                                             >✕</button>
@@ -619,6 +640,7 @@ export default function ProductManager() {
                                         {formData.variants.map((variant, idx) => (
                                             <div key={idx} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm relative group transition-all hover:shadow-md">
                                                 <button
+                                                    type="button"
                                                     onClick={() => removeVariant(idx)}
                                                     className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors bg-gray-50 p-2 rounded-full"
                                                     title="Remove Variant"
@@ -634,7 +656,7 @@ export default function ProductManager() {
                                                             {variant.imageUrl ? (
                                                                 <>
                                                                     <img src={variant.imageUrl} className="w-full h-full object-contain rounded-lg p-1" alt="" />
-                                                                    <button className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs shadow" onClick={() => updateVariant(idx, 'imageUrl', '')}>✕</button>
+                                                                    <button type="button" className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs shadow" onClick={() => updateVariant(idx, 'imageUrl', '')}>✕</button>
                                                                 </>
                                                             ) : (
                                                                 <span className="text-gray-300 text-2xl">+</span>
@@ -707,6 +729,7 @@ export default function ProductManager() {
                                     </div>
 
                                     <button
+                                        type="button"
                                         onClick={addVariant}
                                         className="w-full py-4 border-2 border-dashed border-gray-300 rounded-2xl text-gray-500 font-bold hover:border-black hover:text-black hover:bg-white transition-all text-lg flex items-center justify-center gap-2"
                                     >
@@ -715,7 +738,7 @@ export default function ProductManager() {
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </form>
                 </div>
             )}
 

@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useState, useEffect } from 'react';
-import { getCategories } from '../services/productService';
+import { getCategories, searchProducts } from '../services/productService';
 
 export default function Navbar() {
     const { user, logout } = useAuth();
@@ -11,10 +11,44 @@ export default function Navbar() {
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
+    const [searchResults, setSearchResults] = useState([]);
+    const [showDropdown, setShowDropdown] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
         getCategories().then(setCategories).catch(console.error);
+    }, []);
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            if (searchQuery.trim()) {
+                try {
+                    // Try 'keyword' first as it's common, or fallback to 'name' if backend requires
+                    const data = await searchProducts({ name: searchQuery, categoryId: selectedCategory });
+                    setSearchResults(Array.isArray(data) ? data : []);
+                    setShowDropdown(true);
+                } catch (error) {
+                    console.error("Search error:", error);
+                    setSearchResults([]);
+                }
+            } else {
+                setSearchResults([]);
+                setShowDropdown(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchQuery, selectedCategory]);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (!event.target.closest('.search-container')) {
+                setShowDropdown(false);
+            }
+        };
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
     }, []);
 
     const handleLogout = () => {
@@ -23,6 +57,7 @@ export default function Navbar() {
     };
 
     const handleSearch = () => {
+        setShowDropdown(false);
         let url = `/products?q=${encodeURIComponent(searchQuery)}`;
         if (selectedCategory) {
             url += `&category=${selectedCategory}`;
@@ -55,7 +90,7 @@ export default function Navbar() {
                     </Link>
 
                     {/* Search Bar */}
-                    <div className="flex-1 max-w-2xl relative hidden md:block">
+                    <div className="flex-1 max-w-2xl relative hidden md:block search-container">
                         <div className="flex">
                             <select
                                 value={selectedCategory}
@@ -92,6 +127,45 @@ export default function Navbar() {
                                 </svg>
                             </button>
                         </div>
+
+                        {/* Live Search Dropdown */}
+                        {showDropdown && searchQuery && (
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-white text-black rounded-lg shadow-2xl border border-gray-200 overflow-hidden z-50">
+                                {searchResults.length > 0 ? (
+                                    <ul>
+                                        {searchResults.slice(0, 5).map((product) => (
+                                            <li key={product.id} className="border-b border-gray-100 last:border-none">
+                                                <Link
+                                                    to={`/product/${product.id}`}
+                                                    className="flex items-center gap-4 p-3 hover:bg-gray-50 transition-colors"
+                                                    onClick={() => setShowDropdown(false)}
+                                                >
+                                                    <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                                                        <img src={product.imageUrl} alt="" className="w-full h-full object-cover" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="font-bold text-sm truncate text-gray-800">{product.name}</h4>
+                                                        <p className="text-red-600 font-bold text-xs">{product.price?.toLocaleString()} ₫</p>
+                                                    </div>
+                                                </Link>
+                                            </li>
+                                        ))}
+                                        <li>
+                                            <button
+                                                onClick={handleSearch}
+                                                className="w-full py-2 text-center text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors uppercase tracking-wide"
+                                            >
+                                                View all {searchResults.length} results
+                                            </button>
+                                        </li>
+                                    </ul>
+                                ) : (
+                                    <div className="p-4 text-center text-sm text-gray-500">
+                                        No products found for "{searchQuery}"
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* Actions */}
