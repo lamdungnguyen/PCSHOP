@@ -22,17 +22,22 @@ export default function FloatingActions() {
         if (!inputValue.trim()) return;
 
         const userMsg = { id: Date.now(), text: inputValue, sender: 'user' };
-        setMessages(prev => [...prev, userMsg]);
+        const currentMessages = [...messages, userMsg];
+        setMessages(currentMessages);
         setInputValue('');
         setIsTyping(true);
+
+        // Build history: exclude the initial greeting (id: 1), map sender to Gemini roles
+        const history = currentMessages
+            .filter(m => m.id !== 1)
+            .slice(0, -1) // exclude the message just sent (it becomes the "current" message)
+            .map(m => ({ role: m.sender === 'user' ? 'user' : 'model', text: m.text }));
 
         try {
             const response = await fetch('http://localhost:8080/api/ai/chat', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ message: inputValue })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: inputValue, context: 'customer_support', history })
             });
 
             if (!response.ok) throw new Error('Failed to get response');
@@ -68,7 +73,7 @@ export default function FloatingActions() {
                             onClick={() => window.open('https://t.me/lamdunggg', '_blank')}
                             className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 transition-transform group relative" title="Messenger">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.03 2 11c0 2.87 1.69 5.4 4.37 6.96-.06.55-.38 1.94-1.29 3.03 1.15.12 3.01-.13 4.29-1.09 1.48.51 3.08.79 4.63.79 5.52 0 10-4.03 10-9s-4.48-9-10-9z" /></svg>
-                            <span className="absolute right-full mr-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Messenger</span>
+                            <span className="absolute right-full mr-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Message</span>
                         </button>
                         <button
                             onClick={() => window.open('https://maps.app.goo.gl/N1gv95cg918wRMkD8', '_blank')}
@@ -114,8 +119,8 @@ export default function FloatingActions() {
                                     {messages.map(msg => (
                                         <div key={msg.id} className={`flex gap-3 ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
                                             <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs shadow-sm ${msg.sender === 'bot'
-                                                    ? 'bg-indigo-600'
-                                                    : 'bg-gray-400'
+                                                ? 'bg-indigo-600'
+                                                : 'bg-gray-400'
                                                 }`}>
                                                 {msg.sender === 'bot'
                                                     ? <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7V5.73C7.4 5.39 7 4.74 7 4a2 2 0 0 1 2-2h3zM7.5 13A2.5 2.5 0 1 0 5 15.5 2.5 2.5 0 0 0 7.5 13zm9 2.5A2.5 2.5 0 1 0 19 13a2.5 2.5 0 0 0-2.5 2.5z" /></svg>
@@ -123,8 +128,8 @@ export default function FloatingActions() {
                                                 }
                                             </div>
                                             <div className={`p-3.5 rounded-2xl shadow-sm text-sm border max-w-[80%] leading-relaxed ${msg.sender === 'bot'
-                                                    ? 'bg-white border-gray-100 rounded-tl-none text-gray-700'
-                                                    : 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-transparent rounded-tr-none'
+                                                ? 'bg-white border-gray-100 rounded-tl-none text-gray-700'
+                                                : 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-transparent rounded-tr-none'
                                                 }`}>
                                                 {msg.text}
                                             </div>
@@ -164,8 +169,8 @@ export default function FloatingActions() {
                                         onClick={handleSend}
                                         disabled={!inputValue.trim() || isTyping}
                                         className={`p-3 rounded-full flex items-center justify-center transition-all shadow-md flex-shrink-0 ${inputValue.trim() && !isTyping
-                                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white hover:scale-105 active:scale-95'
-                                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            ? 'bg-indigo-600 hover:bg-indigo-700 text-white hover:scale-105 active:scale-95'
+                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                             }`}
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
@@ -179,7 +184,7 @@ export default function FloatingActions() {
                             onClick={() => setShowChat(!showChat)}
                             className="flex items-center gap-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white px-5 py-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 group"
                         >
-                            <span className="font-bold tracking-wide">AI Asistant</span>
+                            <span className="font-bold tracking-wide">AI Assistant</span>
                             <div className="relative">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />

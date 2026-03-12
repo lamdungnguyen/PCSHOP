@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useCart } from '../context/CartContext';
@@ -108,38 +108,49 @@ export default function BuildPC() {
         setShowModal(null);
     };
 
+    const chatEndRef = useRef(null);
     const [chatInput, setChatInput] = useState("");
-    const [chatHistory, setChatHistory] = useState([]);
+    const [chatHistory, setChatHistory] = useState([
+        { text: "Hello! I'm your AI PC Builder. Tell me your needs and budget — e.g. \"Gaming PC under 25M VND for GTA VI\" — and I'll suggest the best config!", isUser: false }
+    ]);
     const [aiLoading, setAiLoading] = useState(false);
     const [suggestedConfig, setSuggestedConfig] = useState([]);
 
-    const handleChatSubmit = async (e) => {
-        e.preventDefault();
-        if (!chatInput.trim()) return;
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatHistory, aiLoading]);
 
-        const userMsg = chatInput;
-        setChatHistory(prev => [...prev, { text: userMsg, isUser: true }]);
+    const sendChat = async (text) => {
+        const userMsg = text || chatInput;
+        if (!userMsg.trim() || aiLoading) return;
+        const currentHistory = [...chatHistory, { text: userMsg, isUser: true }];
+        setChatHistory(currentHistory);
         setChatInput("");
         setAiLoading(true);
+
+        // Build history for backend: exclude first bot greeting, map to Gemini roles
+        const history = currentHistory
+            .slice(1)   // skip initial greeting
+            .slice(0, -1) // exclude the message just sent
+            .map(m => ({ role: m.isUser ? 'user' : 'model', text: m.text }));
 
         try {
             const res = await fetch("http://localhost:8080/api/ai/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: userMsg })
+                body: JSON.stringify({ message: userMsg, context: 'build_pc', history })
             });
             const data = await res.json();
-
             setChatHistory(prev => [...prev, { text: data.reply, isUser: false }]);
-            if (data.recommendations && data.recommendations.length > 0) {
-                setSuggestedConfig(data.recommendations);
-            }
-        } catch (err) {
-            setChatHistory(prev => [...prev, { text: "Sorry, I am having trouble connecting to the server.", isUser: false }]);
+            if (data.recommendations?.length > 0) setSuggestedConfig(data.recommendations);
+        } catch {
+            setChatHistory(prev => [...prev, { text: "Sorry, I'm having trouble connecting. Please try again.", isUser: false }]);
         } finally {
             setAiLoading(false);
         }
     };
+
+    const handleChatSubmit = (e) => { e.preventDefault(); sendChat(); };
 
     const handleAddAllToCart = () => {
         Object.values(selectedItems).forEach(item => {
@@ -228,63 +239,105 @@ export default function BuildPC() {
                 </div>
 
                 {/* AI Support Section */}
-                <div className="mt-12 bg-gradient-to-r from-blue-900 to-purple-900 rounded-2xl p-8 text-white shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
+                <div className="mt-12 rounded-2xl text-white shadow-2xl relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e3a5f 100%)' }}>
+                    {/* Decorative blobs */}
+                    <div className="absolute top-0 right-0 w-72 h-72 bg-blue-500 opacity-10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-56 h-56 bg-purple-600 opacity-10 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 pointer-events-none" />
 
-                    <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
-                        <div className="flex-1">
-                            <h2 className="text-3xl font-bold mb-4 flex items-center gap-3">
-                                <span className="text-4xl">🤖</span> AI PC Builder Assistant
-                            </h2>
-                            <p className="text-blue-100 text-lg mb-6">
-                                Not sure what to pick? Tell our AI what you need (e.g., "Gaming PC for GTA VI under 30 million VND") and get an instant recommendation.
-                            </p>
-
-                            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
-                                <div className="h-40 overflow-y-auto mb-4 space-y-3 font-mono text-sm" id="ai-chat-box">
-                                    <div className="bg-white/10 p-2 rounded rounded-tl-none self-start mr-12">
-                                        Hello! I'm your AI assistant. How can I help you build your PC today?
+                    <div className="relative z-10 flex flex-col lg:flex-row">
+                        {/* Chat Column */}
+                        <div className="flex-1 flex flex-col p-6 lg:p-8">
+                            {/* Header */}
+                            <div className="flex items-center gap-3 mb-5">
+                                <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-xl backdrop-blur-sm border border-white/20">🤖</div>
+                                <div>
+                                    <h2 className="text-lg font-bold leading-tight">AI PC Builder Assistant</h2>
+                                    <div className="flex items-center gap-1.5 text-xs text-blue-300">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" />
+                                        Powered by Gemini AI
                                     </div>
-                                    {chatHistory.map((msg, idx) => (
-                                        <div key={idx} className={`p-2 rounded max-w-[80%] ${msg.isUser ? 'bg-blue-500 self-end ml-auto rounded-tr-none text-right' : 'bg-white/10 self-start mr-12 rounded-tl-none'}`}>
+                                </div>
+                            </div>
+
+                            {/* Message area */}
+                            <div className="flex-1 bg-black/20 rounded-2xl p-4 mb-4 overflow-y-auto space-y-3" style={{ minHeight: 260, maxHeight: 340 }}>
+                                {chatHistory.map((msg, idx) => (
+                                    <div key={idx} className={`flex items-end gap-2 ${msg.isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                                        {!msg.isUser && (
+                                            <div className="w-7 h-7 rounded-lg bg-white/15 border border-white/20 flex items-center justify-center text-sm flex-shrink-0">🤖</div>
+                                        )}
+                                        <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed max-w-[78%] ${msg.isUser
+                                            ? 'bg-blue-500 text-white rounded-br-sm'
+                                            : 'bg-white/12 text-blue-50 rounded-bl-sm border border-white/10'
+                                            }`}>
                                             {msg.text}
                                         </div>
-                                    ))}
-                                    {aiLoading && <div className="text-xs text-blue-200 animate-pulse">AI is thinking...</div>}
-                                </div>
-                                <form onSubmit={handleChatSubmit} className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={chatInput}
-                                        onChange={(e) => setChatInput(e.target.value)}
-                                        placeholder="Type your request... (e.g. 'Gaming PC 30 million')"
-                                        className="flex-1 bg-white/20 border border-white/30 rounded-lg px-4 py-2 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                    />
-                                    <button type="submit" disabled={aiLoading} className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-bold transition-all shadow-lg disabled:opacity-50">
-                                        {aiLoading ? '...' : 'Ask AI'}
-                                    </button>
-                                </form>
+                                    </div>
+                                ))}
+                                {aiLoading && (
+                                    <div className="flex items-end gap-2">
+                                        <div className="w-7 h-7 rounded-lg bg-white/15 border border-white/20 flex items-center justify-center text-sm flex-shrink-0">🤖</div>
+                                        <div className="bg-white/12 border border-white/10 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1.5 items-center">
+                                            <span className="w-1.5 h-1.5 bg-blue-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                            <span className="w-1.5 h-1.5 bg-blue-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                            <span className="w-1.5 h-1.5 bg-blue-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                        </div>
+                                    </div>
+                                )}
+                                <div ref={chatEndRef} />
                             </div>
+
+                            {/* Quick prompts */}
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {['Gaming PC 20M', 'Workstation render 3D', 'Office PC budget', 'AI/ML rig'].map(q => (
+                                    <button key={q} onClick={() => sendChat(q)}
+                                        className="text-xs px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-blue-200 hover:text-white transition-all">
+                                        {q}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Input */}
+                            <form onSubmit={handleChatSubmit} className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={chatInput}
+                                    onChange={(e) => setChatInput(e.target.value)}
+                                    placeholder="e.g. Gaming PC for GTA VI under 30M VND..."
+                                    className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white text-sm placeholder-blue-300/60 focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-400/50 transition-all"
+                                />
+                                <button type="submit" disabled={aiLoading || !chatInput.trim()}
+                                    className="bg-blue-500 hover:bg-blue-400 disabled:opacity-40 text-white px-5 py-3 rounded-xl font-bold text-sm transition-all shadow-lg flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                                        <path d="M3.105 2.288a.75.75 0 0 0-.826.95l1.414 4.926A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086l-1.414 4.926a.75.75 0 0 0 .826.95 28.897 28.897 0 0 0 15.293-7.155.75.75 0 0 0 0-1.114A28.897 28.897 0 0 0 3.105 2.288Z" />
+                                    </svg>
+                                    Send
+                                </button>
+                            </form>
                         </div>
 
-                        <div className="w-full md:w-1/3 bg-white/5 rounded-xl p-6 border border-white/10">
-                            <h3 className="font-bold text-xl mb-4 border-b border-white/10 pb-2">Suggested Config</h3>
-                            <div className="space-y-3 text-sm text-blue-100">
+                        {/* Suggested Config Column */}
+                        <div className="w-full lg:w-72 border-t lg:border-t-0 lg:border-l border-white/10 p-6 lg:p-8 flex flex-col">
+                            <h3 className="font-bold text-base mb-1">Suggested Config</h3>
+                            <p className="text-blue-300 text-xs mb-4">AI-generated recommendation</p>
+                            <div className="flex-1 space-y-2">
                                 {suggestedConfig.length > 0 ? suggestedConfig.map((item, idx) => (
-                                    <div key={idx} className="flex justify-between">
-                                        <span>{item.category}:</span>
-                                        <span className="font-bold text-white text-right ml-2">{item.productName}</span>
+                                    <div key={idx} className="bg-white/8 border border-white/10 rounded-xl px-3 py-2.5">
+                                        <div className="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-0.5">{item.category}</div>
+                                        <div className="text-sm text-white font-medium line-clamp-1">{item.productName}</div>
                                     </div>
                                 )) : (
-                                    <p className="text-center text-blue-300 italic">Chat with AI to get a config...</p>
-                                )}
-
-                                {suggestedConfig.length > 0 && (
-                                    <div className="pt-3 border-t border-white/10 text-center">
-                                        <button className="text-blue-300 hover:text-white font-bold underline">Apply This Config</button>
+                                    <div className="flex flex-col items-center justify-center h-32 text-center">
+                                        <div className="text-3xl mb-2 opacity-30">💡</div>
+                                        <p className="text-blue-300/60 text-sm">Chat with AI to receive a personalized config</p>
                                     </div>
                                 )}
                             </div>
+                            {suggestedConfig.length > 0 && (
+                                <button className="mt-4 w-full py-2.5 rounded-xl border border-blue-400/40 text-blue-300 hover:bg-blue-500 hover:text-white hover:border-blue-500 font-semibold text-sm transition-all">
+                                    Apply This Config
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -30,10 +30,13 @@ export default function Products() {
                     if (categoryId) params.categoryId = categoryId;
                     if (searchQuery) params.name = searchQuery;
                     const data = await searchProducts(params);
-                    setProducts(data);
+                    // Deduplicate by id
+                    const unique = data.filter((p, idx, arr) => arr.findIndex(x => x.id === p.id) === idx);
+                    setProducts(unique);
                 } else {
                     const data = await getAllProducts();
-                    setProducts(data);
+                    const unique = data.filter((p, idx, arr) => arr.findIndex(x => x.id === p.id) === idx);
+                    setProducts(unique);
                 }
             } catch (error) {
                 console.error("Failed to load products", error);
@@ -61,7 +64,7 @@ export default function Products() {
             <main className="flex-1 container-custom mx-auto py-8 px-4">
                 <div className="flex flex-col md:flex-row gap-8">
                     {/* Sidebar Filters */}
-                    <aside className="w-full md:w-64 flex-shrink-0 space-y-6 sticky top-24 h-fit">
+                    <aside className="w-full md:w-64 flex-shrink-0 space-y-6 sticky top-24 h-fit z-40 overflow-visible">
                         <CategorySidebar categories={categories} />
 
                         {/* Price Filter Mock */}
