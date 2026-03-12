@@ -1,0 +1,18 @@
+# Secrets & Environment
+.env
+*.env
+
+# Maven
+pcshop-be/target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Node
+pcshop-fe/node_modules/
+pcshop-fe/dist/
+
+# Logs
+*.log

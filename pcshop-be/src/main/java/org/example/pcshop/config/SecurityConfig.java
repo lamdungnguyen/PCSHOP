@@ -1,5 +1,6 @@
 package org.example.pcshop.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.example.pcshop.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -7,13 +8,20 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.oauth2.client.oidc.authentication.OidcIdTokenDecoderFactory;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.Duration;
 
 @Configuration
 @EnableWebSecurity
+@Slf4j
 public class SecurityConfig {
 
         private final OAuth2LoginSuccessHandler successHandler;
@@ -45,7 +53,7 @@ public class SecurityConfig {
                                                 .requestMatchers(HttpMethod.POST, "/api/ai/**").permitAll()
 
                                                 // ✅ AUTH (Login/Register PUBLIC, /me PRIVATE)
-                                                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                                .requestMatchers("/api/auth/login", "/api/auth/register", "/login", "/login/**", "/oauth2/**").permitAll()
 
                                                 // ✅ PUBLIC API
                                                 .requestMatchers(
@@ -73,9 +81,9 @@ public class SecurityConfig {
 
                                                 // 🔐 USER & ADMIN
                                                 .requestMatchers("/api/orders/all").hasRole("ADMIN")
-                                                .requestMatchers(HttpMethod.PUT, "/api/orders/*/status")
-                                                .hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.PUT, "/api/orders/*/status").hasRole("ADMIN")
                                                 .requestMatchers("/api/orders/**").authenticated()
+                                                .requestMatchers("/api/users/**").authenticated() // Mới thêm cho Update Profile
 
                                                 // ✅ Allow OPTIONS for CORS preflight
                                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -97,7 +105,17 @@ public class SecurityConfig {
                                 // OAUTH2 – CHỈ CHO WEB
                                 // =========================
                                 .oauth2Login(oauth -> oauth
-                                                .successHandler(successHandler))
+                                                .successHandler(successHandler)
+                                                .failureHandler((request, response, exception) -> {
+                                                        String reason = exception.getMessage();
+                                                        if (exception instanceof OAuth2AuthenticationException oauthEx) {
+                                                                reason = oauthEx.getError().getErrorCode() + ": " + oauthEx.getError().getDescription();
+                                                        }
+                                                        log.error("OAuth2 login failed: {}", reason);
+                                                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                                                        response.setContentType("application/json;charset=UTF-8");
+                                                        response.getWriter().write("{\"error\":\"OAuth2 login failed\",\"detail\":\"" + reason + "\"}");
+                                                }))
 
                                 // =========================
                                 // JWT FILTER
@@ -129,5 +147,24 @@ public class SecurityConfig {
                 source.registerCorsConfiguration("/**", configuration);
 
                 return source;
+        }
+
+        // =========================
+        // CLOCK SKEW – Fix invalid_id_token khi đồng hồ lệch
+        // =========================
+        @Bean
+        public JwtDecoderFactory<ClientRegistration> idTokenDecoderFactory() {
+                OidcIdTokenDecoderFactory factory = new OidcIdTokenDecoderFactory();
+                factory.setJwtValidatorFactory(clientRegistration -> {
+                        // Gọi setClockSkew trực tiếp trên OidcIdTokenValidator
+                        org.springframework.security.oauth2.client.oidc.authentication.OidcIdTokenValidator oidcValidator =
+                                new org.springframework.security.oauth2.client.oidc.authentication.OidcIdTokenValidator(clientRegistration);
+                        oidcValidator.setClockSkew(Duration.ofMinutes(5));
+                        return new org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator<>(
+                                new JwtTimestampValidator(Duration.ofMinutes(5)),
+                                oidcValidator
+                        );
+                });
+                return factory;
         }
 }
