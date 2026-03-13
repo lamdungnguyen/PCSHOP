@@ -100,7 +100,7 @@ export default function Home() {
 
       <main className="container-custom mx-auto py-6 space-y-12">
         {/* ===== HERO SECTION ===== */}
-        <section className="grid grid-cols-12 gap-4 h-auto md:h-[400px]">
+        <section className="grid grid-cols-12 gap-4 h-[250px] md:h-[400px]">
           {/* Left Sidebar - Categories */}
           <div className="col-span-3 hidden md:block h-full">
             <CategorySidebar categories={categories} />

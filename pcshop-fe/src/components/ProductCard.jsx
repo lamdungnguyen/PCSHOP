@@ -23,6 +23,10 @@ export default function ProductCard({ product }) {
           src={image}
           alt={product.name}
           className="max-h-full max-w-full object-contain relative z-0 pointer-events-none"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = `https://via.placeholder.com/300?text=${encodeURIComponent(product.name || "No Image")}`;
+          }}
         />
 
         {/* Action Buttons Overlay */}
